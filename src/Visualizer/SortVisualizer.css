@@ -1,0 +1,16 @@
+.array-container{
+    position: absolute;
+    left:100px;
+    right: 100px;
+}
+
+.array-element{
+    width: 4px;
+    background-color: white;
+    display: inline-block;
+    margin: 0 1px;
+}
+
+.button{
+    position: static;
+}
