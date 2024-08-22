@@ -7,7 +7,6 @@ import {CgPlayPauseO} from "react-icons/cg";
 import {BsFillPlayCircleFill} from "react-icons/bs";
 import {IoPlayForward, IoPlayBack} from "react-icons/io5";
 import { TiArrowShuffle } from "react-icons/ti";
-//import "./SortVisualizer.css"
 
 function generateRandomArray(numberOfElements){
     const array = [];
@@ -48,6 +47,8 @@ function SortVisualizer(){
             if(this.state !== PlayerState.PAUSED){
                 this.lastDirection = this.state;
                 this.state = PlayerState.PAUSED;
+            }else{
+                this.state = this.lastDirection;
             }
         }
 
@@ -64,19 +65,9 @@ function SortVisualizer(){
         get(){
             return this.state;
         }
-
-        isReversed(){
-            return this.lastDirection === PlayerState.PLAYING_REVERSE;
-        }
     }
 
     const [playerState, setPlayerState] = useState(new PlayerState());
-    /*const [isPlaying, setIsPlaying] = useState({
-        start: false,
-        pause: false,
-        reverse: false
-    });*/
-
     const [selectedOption, setSelectedOption] = useState(null);
     const [sortAlgorithm, setSortAlgorithm] = useState(null);
     
@@ -101,8 +92,6 @@ function SortVisualizer(){
 
     //Starts animation and sort and fills setSwapRegister with all the swaps;
     useEffect(()=>{
-        //TODO: You should probably sort only if isPlaying is true;
-        
         if(array !== null &&  typeof sortAlgorithm === 'function'){
             const newSwapsRegister = sortAlgorithm([...array]);
             setSwapsRegister([array, ...newSwapsRegister]);
@@ -117,25 +106,25 @@ function SortVisualizer(){
         if(playerState.get() == PlayerState.PLAYING_FORWARD || playerState.get() == PlayerState.PLAYING_REVERSE && swapsRegister.length > 1){
             setIsAnimating(true);
             const timer = setInterval(() => {
-                if(!playerState.isReversed()){
+                if(playerState.get() !== PlayerState.PLAYING_REVERSE){
                     if(currentIndex < swapsRegister.length - 1){
                         setCurrentIndex(currentIndex + 1);
                     }else{
                         setIsAnimating(false);
-                        let newPlayerState = new PlayerState();
-                        Object.assign(newPlayerState, playerState);     
-                        newPlayerState.pause(); //Maybe .inactive() is better!
-                        setPlayerState(newPlayerState);
+                        let newState = new PlayerState();
+                        Object.assign(newState, playerState);     
+                        newState.pause();
+                        setPlayerState(newState);
                     } 
                 }else{
                     if(currentIndex > 0){
                         setCurrentIndex(currentIndex - 1);
                     }else{
                         setIsAnimating(false);
-                        let newPlayerState = new PlayerState();
-                        Object.assign(newPlayerState, playerState);
-                        newPlayerState.pause();
-                        setPlayerState(newPlayerState);
+                        let newState = new PlayerState();
+                        Object.assign(newState, playerState);
+                        newState.pause();
+                        setPlayerState(newState);
                     }
                 }
             }, animationSpeed);
@@ -144,7 +133,7 @@ function SortVisualizer(){
                 clearInterval(timer);
             }
         }
-    }, [swapsRegister, playerState, setCurrentIndex,currentIndex]);//Remove isPlaying
+    }, [swapsRegister, playerState, setCurrentIndex,currentIndex]);
 
 
     const handleNumberOfElementsChange = (event) => {
@@ -168,34 +157,20 @@ function SortVisualizer(){
     }
 
     const handlePlayPause = () => { 
-        setPlayerState(prevState => {
+        setPlayerState((prevState) => {
             const newState = new PlayerState();
             Object.assign(newState, prevState);
-
+        
             if(newState.get() === PlayerState.PLAYING_FORWARD || newState.get() === PlayerState.PLAYING_REVERSE){
                 newState.pause();
             }else if(newState.get() === PlayerState.PAUSED || newState.get() === PlayerState.INACTIVE){
                 newState.play();
+            }else{
+                newState.pause();
             }
-
+            
             return newState;
         });
-        
-        
-        /*let newPlayerState = new PlayerState();
-        Object.assign(newPlayerState, playerState);
-        if(newPlayerState.get() === PlayerState.PLAYING_FORWARD || newPlayerState.get === PlayerState.PLAYING_REVERSE){
-            newPlayerState.pause();
-        }else{
-            if(newPlayerState.get() === PlayerState.PAUSED  && newPlayerState.isReversed()){
-                console.log("B");
-                newPlayerState.reverse();
-            }else{
-                newPlayerState.forward();
-            }
-        }
-
-        setPlayerState(newPlayerState);*/
     };
     
     const handleReverse = () =>{
@@ -216,32 +191,6 @@ function SortVisualizer(){
         });
     };
     
-    /*const handleDirection = () => {
-        let newPlayerState = new PlayerState();
-        Object.assign(newPlayerState, playerState);
-        
-        if(newPlayerState.get() === PlayerState.PLAYING_FORWARD){
-            newPlayerState.reverse();
-        }else if(newPlayerState.get() === PlayerState.PAUSED){
-            if(newPlayerState.isReversed()){
-                newPlayerState.forward();
-            }else{
-                newPlayerState.reverse(); 
-            }
-            newPlayerState.play();
-        }else{
-            newPlayerState.forward();
-        }
-
-        setPlayerState(newPlayerState); 
-    }
-
-    const handleForward = () =>{
-        let newPlayerState = new PlayerState();
-        newPlayerState.state = playerState.get();
-        newPlayerState.play();
-        setPlayerState(newPlayerState);
-    }*/
     return(
         <>
             <div className="shadow-2xl rounded-xl"> 
@@ -252,18 +201,18 @@ function SortVisualizer(){
                                 if(playerState.get() == PlayerState.PAUSED){
                                     generateNewArray();
                                 }
-                            }}><TiArrowShuffle size={30}/></button> {/*<TiArrowShuffle size={30}/>*/}
+                            }}><TiArrowShuffle size={30}/></button>
                         </div>
                         
                         <form className="justify-start  p-4"> {/*DropDown menu*/}
                             <select className="bg-white shadow-lg text-sm rounded-lg block w-full p-2.5 text-black transition ease-in-out delay-150 hover: -translate-y-1 hover:scale-110 duration-300"
                                 onChange={handleAlgorithmChange} 
-                                disabled={playerState.get() === PlayerState.PLAYING_FORWARD || playerState.get() === PlayerState.PLAYING_REVERSE} //TODO: Aggiustare!
+                                disabled={playerState.get() === PlayerState.PLAYING_FORWARD || playerState.get() === PlayerState.PLAYING_REVERSE} 
                             >
                                 <option selected>Select an algorithm</option>
                                 {options.map(option => (
                                     <option className="" key={option.name}>
-                                        {option.name}{option.name === selectedOption ? ' ✓ ':''} {/*For iphone users you already get the check symbol*/}
+                                        {option.name}{option.name === selectedOption ? ' ✓ ':''}
                                     </option>
                                 ))}
                             </select>
@@ -300,20 +249,11 @@ function SortVisualizer(){
                 <nav className="flex p-2 justify-center h-16">
                     <div className="flex items-center text-center">
                         <button className="p-4 text-black" onClick={handleReverse}><IoPlayBack size={30}/></button>
-                        {playerState.isReversed() ? (
-                            <button className="p-4 text-black" onClick={() =>{
-                                let newPlayerState = new PlayerState();
-                                Object.assign(newPlayerState, playerState);
-                                newPlayerState.pause()
-                                setPlayerState(newPlayerState);
-                            }}>
-                                <CgPlayPauseO size={50}/>
-                            </button>
-                        ) : (
-                            <button className="p-4 text-black" onClick={handlePlayPause}>
-                                {playerState.get() === PlayerState.PLAYING_FORWARD ? <CgPlayPauseO size={50}/> : <BsFillPlayCircleFill size={50}/>}
-                            </button>
-                        )}
+                        
+                        <button className="p-4 text-black" onClick={handlePlayPause}>
+                                {playerState.get() !== PlayerState.PAUSED && playerState.get() !== PlayerState.INACTIVE ? <CgPlayPauseO size={50}/> : <BsFillPlayCircleFill size={50}/>}
+                        </button>
+                        
                         <button className="p-4 text-black" onClick={handleForward}><IoPlayForward size={30}/></button>
                     </div>
                 </nav>
