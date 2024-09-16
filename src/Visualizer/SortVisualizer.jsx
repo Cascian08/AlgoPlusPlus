@@ -7,6 +7,7 @@ import {CgPlayPauseO} from "react-icons/cg";
 import {BsFillPlayCircleFill} from "react-icons/bs";
 import {IoPlayForward, IoPlayBack} from "react-icons/io5";
 import { TiArrowShuffle } from "react-icons/ti";
+import initSqlJs from "sql.js";
 
 function generateRandomArray(numberOfElements){
     const array = [];
@@ -67,16 +68,71 @@ function SortVisualizer(){
         }
     }
 
+    class DB{
+        constructor() {
+            this.SQL = null;
+            this.db = null;
+            this.isOpen = true;
+        }
+
+        async init() {
+            this.SQL = await initSqlJs({
+                locateFile: file => `https://sql.js.org/dist/${file}`
+            });
+            this.response = await fetch('AlgoDB/AlgoDB.sqlite');
+            this.arrayBuffer = await this.response.arrayBuffer();
+            
+            this.db = new this.SQL.Database(new Uint8Array(this.arrayBuffer));
+        }
+
+        getNames() {
+            const result = this.db.exec("SELECT name FROM ALGORITHMS");
+            this.db.close();
+            return result[0] ? result[0].values.map(row => row[0]) : [];
+        }
+
+        getAll(rowIndex) {
+            const result = this.db.exec("SELECT * FROM ALGORITHMS");
+            this.db.close();
+            
+            const algoInfo = {
+                id: result[0].values[rowIndex][0], 
+                name: result[0].values[rowIndex][1], 
+                action: result[0].values[rowIndex][2], 
+                description: result[0].values[rowIndex][3], 
+                code: result[0].values[rowIndex][4], 
+                complexity: result[0].values[rowIndex][5]
+            };
+            
+            return algoInfo;
+        }
+        
+        isDbOpen(){
+            return this.isOpen;
+        }
+
+        closeDb(){
+            if(this.db){
+                this.db.close();
+                this.isOpen = false;
+            }
+        }
+    }
     const [playerState, setPlayerState] = useState(new PlayerState());
-    const [selectedOption, setSelectedOption] = useState(null);
+    const [selectedOption, setSelectedOption] = useState('');
+    const [options, setOptions] = useState([]);
     const [sortAlgorithm, setSortAlgorithm] = useState(null);
-    
-    const options = [
-        {name: 'Bubble sort', action: BubbleSort},
-        {name: 'Quicksort', action: QuickSort},
-        {name: 'Merge sort', action: MergeSort},
-        {name: 'Insertion sort', action: InsertionSort}
-    ];
+
+    useEffect(() =>{
+        const fetchAlgorithmsList = async() =>{
+            const db = new DB();
+            await db.init();
+            const names = db.getNames();
+            //Filter out null or empty names;
+            setOptions(names.filter(name => name !== null && name !== ""));
+        };
+        fetchAlgorithmsList();
+    },[]);
     
     const generateNewArray = useCallback(() => {
        const newArray = generateRandomArray(numberOfElements);
@@ -90,7 +146,7 @@ function SortVisualizer(){
         generateNewArray();
     }, [generateNewArray]);
 
-    //Starts animation and sort and fills setSwapRegister with all the swaps;
+    //Starts animation,sorts and fills setSwapRegister with all the swaps;
     useEffect(()=>{
         if(array !== null &&  typeof sortAlgorithm === 'function'){
             const newSwapsRegister = sortAlgorithm([...array]);
@@ -147,14 +203,28 @@ function SortVisualizer(){
         const newSpeed = 1100 - event.target.value;
         setAnimationSpeed(newSpeed);
     }
-
-    const handleAlgorithmChange = (event) =>{
-        const option = options.find(option => option.name === event.target.value);
-        if(option){
-            setSelectedOption(option.name);
-            setSortAlgorithm(() => option.action);
+    
+    const handleAlgorithmChange = async (event) => {
+        const db = new DB();
+        await db.init();
+    
+        if (options.includes(event.target.value)) {
+            const index = options.indexOf(event.target.value);
+            setSelectedOption(event.target.value);
+            // Check if the database is open before proceeding
+            if (db.isDbOpen()) {
+                setCurrentIndex(0);
+                try {
+                    const action = db.getAll(index).action;
+                    setSortAlgorithm(() => eval(action));
+                } catch (error) {
+                    console.error("Error retrieving action from database:", error);
+                }
+            } else {
+                console.error("Database is closed.");
+            }
         }
-    }
+    };
 
     const handlePlayPause = () => { 
         setPlayerState((prevState) => {
@@ -198,7 +268,7 @@ function SortVisualizer(){
                     <div className="flex items-center">
                         <div className="justify-start p-4 rounded-md transition ease-in-out delay-150 hover: -translate-y-1 hover:scale-110 duration-300">
                             <button className="text-black transition ease-in-out" onClick={() => {
-                                if(playerState.get() == PlayerState.PAUSED){
+                                if(playerState.get() == PlayerState.PAUSED || playerState.get() == PlayerState.INACTIVE){
                                     generateNewArray();
                                 }
                             }}><TiArrowShuffle size={30}/></button>
@@ -211,8 +281,8 @@ function SortVisualizer(){
                             >
                                 <option selected>Select an algorithm</option>
                                 {options.map(option => (
-                                    <option className="" key={option.name}>
-                                        {option.name}{option.name === selectedOption ? ' ✓ ':''}
+                                    <option key={option} value={option}>
+                                        {option}
                                     </option>
                                 ))}
                             </select>

@@ -5,4 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: "/AlgoPlusPlus/",
   plugins: [react()],
+  server: {
+    mimeTypes: {
+      'application/wasm': ['wasm']
+    }
+  }
 })
