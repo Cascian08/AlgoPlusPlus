@@ -1,8 +1,9 @@
 import React, {useState, useEffect, useCallback} from "react";
-import BubbleSort from "./Algorithms/SortingAlgorithms/BubbleSort";
-import QuickSort from "./Algorithms/SortingAlgorithms/QuickSort";
-import MergeSort from "./Algorithms/SortingAlgorithms/MergeSort";
-import InsertionSort from "./Algorithms/SortingAlgorithms/InsertionSort";
+//import BubbleSort from "./Algorithms/SortingAlgorithms/BubbleSort";
+//import QuickSort from "./Algorithms/SortingAlgorithms/QuickSort";
+//import MergeSort from "./Algorithms/SortingAlgorithms/MergeSort";
+//import InsertionSort from "./Algorithms/SortingAlgorithms/InsertionSort";
+import algoList from "./Algorithms/SortingAlgorithmList";
 import {CgPlayPauseO} from "react-icons/cg";
 import {BsFillPlayCircleFill} from "react-icons/bs";
 import {IoPlayForward, IoPlayBack} from "react-icons/io5";
@@ -97,8 +98,7 @@ function SortVisualizer(){
             
             const algoInfo = {
                 id: result[0].values[rowIndex][0], 
-                name: result[0].values[rowIndex][1], 
-                action: result[0].values[rowIndex][2], 
+                name: result[0].values[rowIndex][1],  
                 description: result[0].values[rowIndex][3], 
                 code: result[0].values[rowIndex][4], 
                 complexity: result[0].values[rowIndex][5]
@@ -204,25 +204,12 @@ function SortVisualizer(){
         setAnimationSpeed(newSpeed);
     }
     
-    const handleAlgorithmChange = async (event) => {
-        const db = new DB();
-        await db.init();
-    
+    const handleAlgorithmChange = (event) => {
         if (options.includes(event.target.value)) {
             const index = options.indexOf(event.target.value);
             setSelectedOption(event.target.value);
-            // Check if the database is open before proceeding
-            if (db.isDbOpen()) {
-                setCurrentIndex(0);
-                try {
-                    const action = db.getAll(index).action;
-                    setSortAlgorithm(() => eval(action));
-                } catch (error) {
-                    console.error("Error retrieving action from database:", error);
-                }
-            } else {
-                console.error("Database is closed.");
-            }
+            setCurrentIndex(0);
+            setSortAlgorithm(() => algoList(event.target.value));
         }
     };
 
